@@ -14,6 +14,14 @@ namespace fs = std::filesystem;
 
 bool sensitive = false;
 bool recursive = false;
+bool output_file = false;
+bool display_line = false;
+bool depth_check = false;
+bool sub_search = false;
+bool file_ext_search = false;
+int depth = 0;
+std::string file_name = "results.txt";
+std::vector<std::string> file_extensions;
 
 void search_for_words_default(std::string sp, std::string word)
 {
@@ -24,21 +32,45 @@ void search_for_words_default(std::string sp, std::string word)
         if (itr->path().filename() != "." && itr->path().filename() != "..")
         {
             p = itr->path();
+            std::string line_number;
+            int i = 0;
             if (fs::is_regular_file(p) && !p.empty())
             {
+                if (sub_search)
+                    continue;
+
+                if (file_ext_search)
+                {
+                    if (!std::count(file_extensions.begin(), file_extensions.end(), fs::path(p).extension()))
+                        continue;
+                }
+
                 std::ifstream file(p.string());
                 std::string line;
                 while (std::getline(file, line))
                 {
+                    if (display_line)
+                    {
+                        i++;
+                    }
+
                     std::stringstream data(line);
                     std::string temp;
                     while (getline(data, temp, ' '))
                     {
+                        if (display_line)
+                            line_number = " - " + std::to_string(i);
+
+                        std::ofstream text_file(file_name, ios::app);
+                        std::ostringstream ss;
                         if (sensitive)
                         {
                             if (word == temp)
                             {
-                                std::cout << p.string() << std::endl;
+                                if (output_file)
+                                    ss << p.string() << line_number << "\n";
+                                else
+                                    std::cout << p.string() << line_number << std::endl;
                             }
                         }
                         else 
@@ -47,9 +79,14 @@ void search_for_words_default(std::string sp, std::string word)
                             std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
                             if (word == temp)
                             {
-                                std::cout << p.string() << std::endl;
+                                if (output_file)
+                                    ss << p.string() << line_number << "\n";
+                                else
+                                    std::cout << p.string() << line_number << std::endl;
                             }
                         }
+                        text_file << ss.str();
+                        text_file.close();
                     }
                 }
             }
@@ -64,11 +101,28 @@ void search_for_words_default(std::string sp, std::string word)
         }
     }
 
+    if (sub_search)
+        sub_search = false;
+
     if (recursive)
     {
-        for (auto f : folders)
+        if (depth_check)
         {
-            search_for_words_default(f, word);
+            while (depth != 0)
+            {
+                depth--;
+                for (auto f : folders)
+                {
+                    search_for_words_default(f, word);
+                }
+            }
+        }
+        else 
+        {
+            for (auto f : folders)
+            {
+                search_for_words_default(f, word);
+            } 
         }
     }
 }
@@ -78,7 +132,7 @@ int main(int argc, char **argv)
     std::string search_path = "../TestData";
     std::string word;
     int opt;
-    while ((opt = getopt(argc, argv, "icr?")) != -1)
+    while ((opt = getopt(argc, argv, "icro:ld:st:?")) != -1)
     {
         switch (opt)
         {
@@ -90,6 +144,31 @@ int main(int argc, char **argv)
             break;
         case 'r':
             recursive = true;
+            break;
+        case 'o':
+            output_file = true;
+            file_name = optarg;
+            remove(file_name.c_str());
+            break;
+        case 'l':
+            display_line = true;
+            break;
+        case 'd':
+            depth_check = true;
+            depth = std::atoi(optarg);
+            break;
+        case 's':
+            sub_search = true;
+            break;
+        case 't':
+        {
+            file_ext_search = true;
+            std::string tmp;
+            std::stringstream ss(optarg);
+
+            while (getline(ss, tmp, ','))
+                file_extensions.push_back('.' + tmp);
+        }
             break;
         case '?':
             std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}" << std::endl;
