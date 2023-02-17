@@ -19,9 +19,11 @@ bool display_line = false;
 bool depth_check = false;
 bool sub_search = false;
 bool file_ext_search = false;
+bool exclude_dir = false;
 int depth = 0;
 std::string file_name = "results.txt";
 std::vector<std::string> file_extensions;
+std::vector<std::string> excluded_dir;
 
 void search_for_words_default(std::string sp, std::string word)
 {
@@ -92,6 +94,28 @@ void search_for_words_default(std::string sp, std::string word)
             }
             else if (fs::is_directory(p))
             {
+                if (exclude_dir)
+                {
+                    bool match = false;
+                    std::stringstream dir_words(p.string());
+                    std::string word;
+
+                    // change the delimiter from / to \\ if you're running windows, path will differ from Linux to Windows
+                    while (getline(dir_words, word, '/'))
+                    {
+                        for (auto w : excluded_dir)
+                        {
+                            std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+                            std::transform(w.begin(), w.end(), w.begin(), [](unsigned char c){ return std::tolower(c); });
+                            if (word == w)
+                                match = true;
+                        }
+                    }
+                    if (match)
+                        continue;
+                    else
+                     folders.push_back(p.string());
+                }
                 folders.push_back(p.string());
             }
             else 
@@ -132,7 +156,7 @@ int main(int argc, char **argv)
     std::string search_path = "../TestData";
     std::string word;
     int opt;
-    while ((opt = getopt(argc, argv, "icro:ld:st:?")) != -1)
+    while ((opt = getopt(argc, argv, "icro:ld:st:e:?")) != -1)
     {
         switch (opt)
         {
@@ -168,6 +192,16 @@ int main(int argc, char **argv)
 
             while (getline(ss, tmp, ','))
                 file_extensions.push_back('.' + tmp);
+        }
+            break;
+        case 'e':
+        {
+            exclude_dir = true;
+            std::string tmp;
+            std::stringstream ss(optarg);
+
+            while (getline(ss, tmp, ','))
+               excluded_dir.push_back(tmp); 
         }
             break;
         case '?':
