@@ -20,6 +20,7 @@ bool depth_check = false;
 bool sub_search = false;
 bool file_ext_search = false;
 bool exclude_dir = false;
+bool hashed_response = false;
 int depth = 0;
 std::string file_name = "results.txt";
 std::vector<std::string> file_extensions;
@@ -114,7 +115,7 @@ void search_for_words_default(std::string sp, std::string word)
                     if (match)
                         continue;
                     else
-                     folders.push_back(p.string());
+                        folders.push_back(p.string());
                 }
                 folders.push_back(p.string());
             }
@@ -151,12 +152,67 @@ void search_for_words_default(std::string sp, std::string word)
     }
 }
 
+std::unordered_map<std::string, std::string> found_words;
+
+void word_indexing(std::string sp)
+{
+    std::vector<std::string> folders;
+    fs::path p;
+    for (fs::directory_iterator itr(sp); itr != fs::directory_iterator(); ++itr)
+    {
+        if (itr->path().filename() != "." && itr->path().filename() != "..")
+        {
+            p = itr->path();
+            if (fs::is_regular_file(p) && !p.empty())
+            {
+                std::ifstream file(p.string());
+                std::string line;
+                while (std::getline(file, line))
+                {
+                    std::stringstream data(line);
+                    std::string temp;
+                    while(std::getline(data, temp, ' '))
+                    {
+                        if (sensitive)
+                            std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
+                        if (found_words.find(temp) != found_words.end())
+                        {
+                            if (found_words[temp] != p.string())
+                                found_words[temp] += "\n" + p.string();
+                        }
+                        else 
+                        {
+                            found_words[temp] = p.string();
+                        }
+                    }
+                }
+            }
+            else if (fs::is_directory(p))
+            {
+                folders.push_back(p.string());
+            }
+        }
+    }
+
+    for (auto& f : folders)
+    {
+        word_indexing(f);
+    }
+}
+
+void print_from_hash(std::string word)
+{
+    if (sensitive)
+        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::cout << found_words[word] << "\n";;
+}
+
 int main(int argc, char **argv)
 {
     std::string search_path = "../TestData";
     std::string word;
     int opt;
-    while ((opt = getopt(argc, argv, "icro:ld:st:e:?")) != -1)
+    while ((opt = getopt(argc, argv, "icro:ld:st:e:h?")) != -1)
     {
         switch (opt)
         {
@@ -190,7 +246,7 @@ int main(int argc, char **argv)
             std::string tmp;
             std::stringstream ss(optarg);
 
-            while (getline(ss, tmp, ','))
+            while (std::getline(ss, tmp, ','))
                 file_extensions.push_back('.' + tmp);
         }
             break;
@@ -200,9 +256,13 @@ int main(int argc, char **argv)
             std::string tmp;
             std::stringstream ss(optarg);
 
-            while (getline(ss, tmp, ','))
+            while (std::getline(ss, tmp, ','))
                excluded_dir.push_back(tmp); 
         }
+            break;
+        case 'h':
+            hashed_response = true;
+            word_indexing(search_path);
             break;
         case '?':
             std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}" << std::endl;
@@ -219,5 +279,18 @@ int main(int argc, char **argv)
     std::cout << "Please enter word to search for: ";
     std::cin >> word;
 
-    search_for_words_default(search_path, word);
+    if (hashed_response)
+    {
+        /*
+        for (auto& i : found_words)
+        {
+            std::cout << i.first << " - " << i.second << "\n";
+        }
+        */
+        print_from_hash(word);
+    }
+    else
+    {
+        search_for_words_default(search_path, word);
+    }
 }
