@@ -32,7 +32,7 @@ std::unordered_map<std::string, std::vector<std::string>> found_words;
 void print_from_hash(std::string word)
 {
     if (!sensitive)
-    std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
 
     for (auto& i : found_words[word])
         std::cout << i << "\n";
