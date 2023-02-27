@@ -27,13 +27,15 @@ std::vector<std::string> file_extensions;
 std::vector<std::string> excluded_dir;
 
 //hashtable
-std::unordered_map<std::string, std::string> found_words;
+std::unordered_map<std::string, std::vector<std::string>> found_words;
 
 void print_from_hash(std::string word)
 {
-    if (sensitive)
+    if (!sensitive)
         std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
-    std::cout << found_words[word] << "\n";;
+
+    for (auto& i : found_words[word])
+        std::cout << i << "\n";
 }
 
 void search_for_words_default(std::string sp, std::string word)
@@ -82,7 +84,7 @@ void search_for_words_default(std::string sp, std::string word)
 
                             std::ofstream text_file(file_name, ios::app);
                             std::ostringstream ss;
-                            if (sensitive)
+                            if (!sensitive)
                             {
                                 std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
                                 std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
@@ -178,17 +180,15 @@ void word_indexing(std::string sp)
                     std::string temp;
                     while(std::getline(data, temp, ' '))
                     {
-                        if (sensitive)
+                        if (!sensitive)
                             std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
                         if (found_words.find(temp) != found_words.end())
                         {
-                            if (found_words[temp] != p.string())
-                                found_words[temp] += "\n" + p.string();
+                            if (found_words[temp].back() != p.string())
+                                found_words[temp].push_back(p.string());
                         }
                         else 
-                        {
-                            found_words[temp] = p.string();
-                        }
+                            found_words[temp].push_back(p.string());
                     }
                 }
             }
@@ -201,7 +201,7 @@ void word_indexing(std::string sp)
 
     for (auto& f : folders)
     {
-        word_indexing(f);
+         word_indexing(f);
     }
 }
 
@@ -260,7 +260,6 @@ int main(int argc, char **argv)
             break;
         case 'h':
             hashed_response = true;
-            word_indexing(search_path);
             break;
         case '?':
             std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}\n\t-h {Hashtable search}" << std::endl;
@@ -272,6 +271,9 @@ int main(int argc, char **argv)
             break;
         }
     }
+
+    if (hashed_response)
+        word_indexing(search_path);
 
     std::cout << "------------------------------\nFile Crawler\n------------------------------" << std::endl;
     std::cout << "Please enter word to search for: ";
