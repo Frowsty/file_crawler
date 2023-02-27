@@ -265,11 +265,11 @@ int main(int argc, char **argv)
             word_indexing(search_path);
             break;
         case '?':
-            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}" << std::endl;
+            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}" << std::endl;
             exit(-1);
             break;
         default:
-            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}" << std::endl;
+            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}" << std::endl;
             exit(-1);
             break;
         }
