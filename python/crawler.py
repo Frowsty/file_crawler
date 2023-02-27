@@ -34,7 +34,7 @@ def search_for_word(path, word):
             
 
 if __name__ == "__main__":
-    opts, args = getopt.getopt(sys.argv[1:], "rcil")
+    opts, args = getopt.getopt(sys.argv[1:], "rcil?")
     for opt, arg in opts:
         if opt == '-r':
             recursive = True
@@ -44,6 +44,9 @@ if __name__ == "__main__":
             sensitive = False
         if opt == '-l':
             display_line = True
+        if opt == '-?':
+            print("~Usage~\n\t-r {Recursive search}\n\t-c {Case sensitive}\n\t-i {Case insensitive}\n\t-l {Display line number}")
+            exit(-1)
 
     print("------------------File Crawler----------------------")
     word = input("Please enter word to search for: ")
