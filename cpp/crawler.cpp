@@ -29,6 +29,7 @@ std::vector<std::string> excluded_dir;
 //hashtable
 std::unordered_map<std::string, std::vector<std::string>> found_words;
 
+// print the words from our hashtable
 void print_from_hash(std::string word)
 {
     if (!sensitive)
@@ -38,8 +39,12 @@ void print_from_hash(std::string word)
         std::cout << i << "\n";
 }
 
+// this function will either print out from the hashtable or manually look through all the files AFTER the user has specified
+// the word that should be looked up, if the user specified to use the hashtable method we have already indexed everything prior to user specifying the word
+// and only have to print out the paths straight from the hashtable
 void search_for_words_default(std::string sp, std::string word)
 {
+    // if we're using the hashing / indexing process just print from the hashtable, else continue with the normal processing
     if (hashed_response)
     {
         print_from_hash(word);
@@ -161,29 +166,38 @@ void search_for_words_default(std::string sp, std::string word)
     }
 }
 
+// index all of the words in the directories and store to a hashtable (unordered_map)
 void word_indexing(std::string sp)
 {
     std::vector<std::string> folders;
     fs::path p;
+    // Iterate the directory
     for (fs::directory_iterator itr(sp); itr != fs::directory_iterator(); ++itr)
     {
+        // check if the directory is not a hidden file or the previous directory (..)
         if (itr->path().filename() != "." && itr->path().filename() != "..")
         {
             p = itr->path();
+            // check if it's a file and is not empty
             if (fs::is_regular_file(p) && !p.empty())
             {
                 std::ifstream file(p.string());
                 std::string line;
+                // read each line from the file
                 while (std::getline(file, line))
                 {
                     std::stringstream data(line);
                     std::string temp;
+                    // read each word from the file, we use space (' ') as the delimiter here
                     while(std::getline(data, temp, ' '))
                     {
+                        // if the search is insensitive we default to lowercase for easy string comparison
                         if (!sensitive)
                             std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
                         if (found_words.find(temp) != found_words.end())
                         {
+                            // make sure we don't add duplicates from the same file (not sure if this was a requirement or not)
+                            // if it's not a duplicate (in the same file that is) we add it to the unordered_map which is a hashtable
                             if (found_words[temp].back() != p.string())
                                 found_words[temp].push_back(p.string());
                         }
@@ -192,6 +206,7 @@ void word_indexing(std::string sp)
                     }
                 }
             }
+            // check if it's a directory, if it is add it to a vector of strings containing directories
             else if (fs::is_directory(p))
             {
                 folders.push_back(p.string());
@@ -199,6 +214,7 @@ void word_indexing(std::string sp)
         }
     }
 
+    // Recursively search the directories
     for (auto& f : folders)
     {
          word_indexing(f);
