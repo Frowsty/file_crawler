@@ -26,48 +26,67 @@ std::string file_name = "results.txt";
 std::vector<std::string> file_extensions;
 std::vector<std::string> excluded_dir;
 
+//hashtable
+std::unordered_map<std::string, std::string> found_words;
+
+void print_from_hash(std::string word)
+{
+    if (sensitive)
+        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+    std::cout << found_words[word] << "\n";;
+}
+
 void search_for_words_default(std::string sp, std::string word)
 {
-    std::vector<std::string> folders;
-    fs::path p;
-    for (fs::directory_iterator itr(sp); itr != fs::directory_iterator(); ++itr)
+    if (hashed_response)
     {
-        if (itr->path().filename() != "." && itr->path().filename() != "..")
+        print_from_hash(word);
+    }
+    else
+    {
+        std::vector<std::string> folders;
+        fs::path p;
+        for (fs::directory_iterator itr(sp); itr != fs::directory_iterator(); ++itr)
         {
-            p = itr->path();
-            std::string line_number;
-            int i = 0;
-            if (fs::is_regular_file(p) && !p.empty())
+            if (itr->path().filename() != "." && itr->path().filename() != "..")
             {
-                if (sub_search)
-                    continue;
-
-                if (file_ext_search)
+                p = itr->path();
+                std::string line_number;
+                int i = 0;
+                if (fs::is_regular_file(p) && !p.empty())
                 {
-                    if (!std::count(file_extensions.begin(), file_extensions.end(), fs::path(p).extension()))
+                    if (sub_search)
                         continue;
-                }
 
-                std::ifstream file(p.string());
-                std::string line;
-                while (std::getline(file, line))
-                {
-                    if (display_line)
+                    if (file_ext_search)
                     {
-                        i++;
+                        if (!std::count(file_extensions.begin(), file_extensions.end(), fs::path(p).extension()))
+                            continue;
                     }
 
-                    std::stringstream data(line);
-                    std::string temp;
-                    while (getline(data, temp, ' '))
+                    std::ifstream file(p.string());
+                    std::string line;
+                    while (std::getline(file, line))
                     {
                         if (display_line)
-                            line_number = " - " + std::to_string(i);
+                        {
+                            i++;
+                        }
 
-                        std::ofstream text_file(file_name, ios::app);
-                        std::ostringstream ss;
-                        if (sensitive)
+                        std::stringstream data(line);
+                        std::string temp;
+                        while (getline(data, temp, ' '))
                         {
+                            if (display_line)
+                                line_number = " - " + std::to_string(i);
+
+                            std::ofstream text_file(file_name, ios::app);
+                            std::ostringstream ss;
+                            if (sensitive)
+                            {
+                                std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+                                std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
+                            }
                             if (word == temp)
                             {
                                 if (output_file)
@@ -75,84 +94,70 @@ void search_for_words_default(std::string sp, std::string word)
                                 else
                                     std::cout << p.string() << line_number << std::endl;
                             }
+                            text_file << ss.str();
+                            text_file.close();
                         }
-                        else 
-                        {
-                            std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
-                            std::transform(temp.begin(), temp.end(), temp.begin(), [](unsigned char c){ return std::tolower(c); });
-                            if (word == temp)
-                            {
-                                if (output_file)
-                                    ss << p.string() << line_number << "\n";
-                                else
-                                    std::cout << p.string() << line_number << std::endl;
-                            }
-                        }
-                        text_file << ss.str();
-                        text_file.close();
                     }
+                }
+                else if (fs::is_directory(p))
+                {
+                    if (exclude_dir)
+                    {
+                        bool match = false;
+                        std::stringstream dir_words(p.string());
+                        std::string word;
+
+                        // change the delimiter from / to \\ if you're running windows, path will differ from Linux to Windows
+                        while (getline(dir_words, word, '/'))
+                        {
+                            for (auto w : excluded_dir)
+                            {
+                                std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
+                                std::transform(w.begin(), w.end(), w.begin(), [](unsigned char c){ return std::tolower(c); });
+                                if (word == w)
+                                    match = true;
+                            }
+                        }
+                        if (match)
+                            continue;
+                        else
+                            folders.push_back(p.string());
+                    }
+                    folders.push_back(p.string());
+                }
+                else 
+                {
+                    std::cout << "ERROR: " << p.string() << std::endl;
                 }
             }
-            else if (fs::is_directory(p))
-            {
-                if (exclude_dir)
-                {
-                    bool match = false;
-                    std::stringstream dir_words(p.string());
-                    std::string word;
+        }
 
-                    // change the delimiter from / to \\ if you're running windows, path will differ from Linux to Windows
-                    while (getline(dir_words, word, '/'))
+        if (sub_search)
+            sub_search = false;
+
+        if (recursive)
+        {
+            if (depth_check)
+            {
+                while (depth != 0)
+                {
+                    depth--;
+                    for (auto f : folders)
                     {
-                        for (auto w : excluded_dir)
-                        {
-                            std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
-                            std::transform(w.begin(), w.end(), w.begin(), [](unsigned char c){ return std::tolower(c); });
-                            if (word == w)
-                                match = true;
-                        }
+                        search_for_words_default(f, word);
                     }
-                    if (match)
-                        continue;
-                    else
-                        folders.push_back(p.string());
                 }
-                folders.push_back(p.string());
             }
             else 
             {
-                std::cout << "ERROR: " << p.string() << std::endl;
-            }
-        }
-    }
-
-    if (sub_search)
-        sub_search = false;
-
-    if (recursive)
-    {
-        if (depth_check)
-        {
-            while (depth != 0)
-            {
-                depth--;
                 for (auto f : folders)
                 {
                     search_for_words_default(f, word);
-                }
+                } 
             }
-        }
-        else 
-        {
-            for (auto f : folders)
-            {
-                search_for_words_default(f, word);
-            } 
         }
     }
 }
-
-std::unordered_map<std::string, std::string> found_words;
 
 void word_indexing(std::string sp)
 {
@@ -198,13 +203,6 @@ void word_indexing(std::string sp)
     {
         word_indexing(f);
     }
-}
-
-void print_from_hash(std::string word)
-{
-    if (sensitive)
-        std::transform(word.begin(), word.end(), word.begin(), [](unsigned char c){ return std::tolower(c); });
-    std::cout << found_words[word] << "\n";;
 }
 
 int main(int argc, char **argv)
@@ -265,11 +263,11 @@ int main(int argc, char **argv)
             word_indexing(search_path);
             break;
         case '?':
-            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}" << std::endl;
+            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}\n\t-h {Hashtable search}" << std::endl;
             exit(-1);
             break;
         default:
-            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}" << std::endl;
+            std::cout << "Usage: " << argv[0] << "\n\t-i {Case insensitive search}\n\t-c {Case sensitive search}\n\t-r {Recursive search}\n\t-o {Output file}\n\t-l {Display Lines}\n\t-d {Depth amount}\n\t-s {Subdirectory search}\n\t-t {File extensions}\n\t-e {Exclude directories}\n\t-h {Hashtable search}" << std::endl;
             exit(-1);
             break;
         }
@@ -279,18 +277,5 @@ int main(int argc, char **argv)
     std::cout << "Please enter word to search for: ";
     std::cin >> word;
 
-    if (hashed_response)
-    {
-        /*
-        for (auto& i : found_words)
-        {
-            std::cout << i.first << " - " << i.second << "\n";
-        }
-        */
-        print_from_hash(word);
-    }
-    else
-    {
-        search_for_words_default(search_path, word);
-    }
+    search_for_words_default(search_path, word);
 }
