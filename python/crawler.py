@@ -34,7 +34,13 @@ def search_for_word(path, word):
             
 
 if __name__ == "__main__":
-    opts, args = getopt.getopt(sys.argv[1:], "rcil?")
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "rcil?")
+    except getopt.GetoptError as err:
+        print("ERROR: " + str(err))
+        print("~Usage~\n\t-r {Recursive search}\n\t-c {Case sensitive}\n\t-i {Case insensitive}\n\t-l {Display line number}")
+        exit(-1)
+
     for opt, arg in opts:
         if opt == '-r':
             recursive = True
