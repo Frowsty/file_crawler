@@ -12,22 +12,30 @@ display_line = False
 #Relative directory
 search_path = os.path.join(cwd,"..",'TestData')
 
+# Search for the user specified word
 def search_for_word(path, word):
+    # Loop files in the directory / path specified to listdir function
     for filename in os.listdir(path):
+        # Rename filename from just filename to complete path + filename
         filename = os.path.join(path, filename)
+        # Check if it's a file we're working with
         if os.path.isfile(filename):
             line = 0
+            # Open the file in order to read the contents of it
             with open(filename, 'r', encoding='utf-8') as f:
+                # Loop line by line instead of grabbing all the content at once
                 for l in f:
                     line += 1
-                    for w in l.split():
+                    # Loop word by word by splitting at space
+                    for w in l.split(" "):
+                        # If it's a case insensitive search, default to lower case everything for easy string comparisons
                         if not sensitive:
                             w = w.lower()
                             word = word.lower()
                         if w == word:
                             # change / for \ in the below lines if you run windows :)
                             print('.' + filename.split('/.')[1] + ' - ' + str(line) if display_line else '.' + filename.split('/.')[1]) # will only work for linux since windows uses \ instead of /
-
+        # Check if we're working with a directory, if so recursively call this function again with the new directory as function argument
         elif os.path.isdir(filename):
             if recursive:
                 search_for_word(filename, word)
@@ -43,7 +51,8 @@ if __name__ == "__main__":
 
     for opt, arg in opts:
         if opt == '-r':
-            recursive = True
+            recursive = Tru
+        e
         if opt == '-c':
             sensitive = True
         if opt == '-i':
